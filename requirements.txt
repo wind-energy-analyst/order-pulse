@@ -1,0 +1,5 @@
+requests>=2.31
+beautifulsoup4>=4.12
+pydantic>=2.6
+openai>=1.40
+cryptography>=42

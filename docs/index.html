@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Order Pulse</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --line: #e4e3df;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+  --exact: #2a78d6; --approx: #86b6ef; --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --up: #0a7a35; --down: #b42318;
+  --warn-bg: #fff4dc; --warn-ink: #6b4a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --line: #2e2e2c;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e88;
+    --exact: #86b6ef; --approx: #3987e5; --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --up: #5bd08a; --down: #f28b82;
+    --warn-bg: #3a2c08; --warn-ink: #f3d79a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19; --line: #2e2e2c;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e88;
+  --exact: #86b6ef; --approx: #3987e5; --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --up: #5bd08a; --down: #f28b82;
+  --warn-bg: #3a2c08; --warn-ink: #f3d79a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+header h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em; }
+header p { margin: 0; color: var(--text-secondary); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0 16px; }
+.filters label { color: var(--text-secondary); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+select, input[type=search] { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-1); color: var(--text-primary); }
+.card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+.card h2 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+.card .sub { color: var(--text-muted); font-size: 12px; margin: 0 0 12px; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .value { font-size: 28px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile .delta { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.tile .delta b { font-weight: 600; }
+.tile .delta .up { color: var(--up); } .tile .delta .down { color: var(--down); }
+.progress { height: 6px; border-radius: 3px; background: var(--line); margin-top: 10px; overflow: hidden; }
+.progress div { height: 100%; background: var(--text-muted); border-radius: 3px; }
+.grid2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.legend i.ln { width: 14px; height: 2px; border-radius: 1px; vertical-align: 3px; }
+svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .val { fill: var(--text-secondary); font-size: 11px; }
+svg .lbl { fill: var(--text-secondary); font-size: 11.5px; }
+.hbar { display: grid; grid-template-columns: minmax(90px, 38%) 1fr; gap: 4px 10px; align-items: center; font-size: 12.5px; }
+.hbar .name { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbar .track { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.hbar .bar { height: 14px; background: var(--exact); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hbar .num { color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { color: var(--text-muted); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 8px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; cursor: pointer; user-select: none; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:first-child { white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.excl td { color: var(--text-muted); }
+tr.excl td.mw { text-decoration: line-through; }
+.reason { display: block; margin-top: 2px; font-size: 11px; color: var(--text-muted); max-width: 260px; }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.tablewrap { overflow-x: auto; }
+.tip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 9; min-width: 170px; }
+.tip b { display: block; margin-bottom: 4px; }
+.tip .row { display: flex; justify-content: space-between; gap: 14px; color: var(--text-secondary); align-items: center; }
+.tip .row span:last-child { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.tip i { display: inline-block; width: 10px; height: 2px; margin-right: 6px; vertical-align: 3px; }
+.note { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; margin-bottom: 12px; display: none; }
+.lock { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: var(--surface-0); }
+.lock form { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 10px; padding: 24px; }
+.lock h2 { font-size: 18px; }
+.lock .sub { margin: 0 0 4px; }
+.lock input[type=password] { font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-0); color: var(--text-primary); }
+.lock .rem { font-size: 13px; color: var(--text-secondary); display: flex; gap: 6px; align-items: center; }
+.lock button { font: inherit; font-weight: 600; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
+.lock button:disabled { opacity: .6; cursor: wait; }
+.lock .msg { min-height: 18px; margin: 0; font-size: 13px; color: var(--text-secondary); }
+@media (max-width: 860px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app" style="display:none">
+  <header>
+    <h1>Nordex order pulse</h1>
+    <p>A running read on how many firm orders Nordex has announced in the quarter so far, from nordex-online.com press releases. <span id="updated"></span></p>
+  </header>
+
+  <div class="filters">
+    <label>Quarter <select id="q"></select></label>
+    <label>Country <select id="country"><option value="">All</option></select></label>
+    <label><input type="search" id="search" placeholder="Search customer, farm, title"></label>
+    <label><input type="checkbox" id="showExcl"> Show excluded rows</label>
+  </div>
+
+  <div class="warn" id="pending"></div>
+
+  <div class="tiles">
+    <div class="card tile"><div class="label" id="t-mw-l">Announced so far</div><div class="value" id="t-mw">–</div><div class="delta" id="t-mw-d"></div></div>
+    <div class="card tile"><div class="label">Firm orders</div><div class="value" id="t-n">–</div><div class="delta" id="t-n-d"></div></div>
+    <div class="card tile"><div class="label" id="t-pq-l">vs last quarter, same point</div><div class="value" id="t-pq">–</div><div class="delta" id="t-pq-d"></div></div>
+    <div class="card tile"><div class="label" id="t-py-l">vs same quarter last year</div><div class="value" id="t-py">–</div><div class="delta" id="t-py-d"></div></div>
+  </div>
+
+  <div class="card">
+    <h2 id="cumTitle">Cumulative announced MW through the quarter</h2>
+    <p class="sub" id="cumSub"></p>
+    <div class="legend" id="cumLegend"></div>
+    <div id="cumchart"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h2>By country</h2><p class="sub qlabel"></p><div id="byCountry"></div></div>
+    <div class="card"><h2>By turbine platform</h2><p class="sub qlabel"></p><div id="byModel"></div></div>
+    <div class="card"><h2>By customer</h2><p class="sub qlabel"></p><div id="byCustomer"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>Orders</h2>
+    <p class="sub" id="tableSub"></p>
+    <div class="tablewrap"><table id="tbl"><thead><tr>
+      <th data-k="announced">Announced</th><th data-k="mw" class="num">MW</th><th data-k="country">Country</th>
+      <th data-k="customer">Customer</th><th data-k="turbine_model">Platform</th><th data-k="turbine_count" class="num">Turbines</th>
+      <th data-k="wind_farm">Wind farm</th><th data-k="firmed_period">Firmed</th><th>Source</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h2>Announced MW per quarter</h2>
+    <p class="sub">History for context. The current quarter is still filling up. Click a column to open that quarter.</p>
+    <div class="legend"><span><i style="background:var(--exact)"></i>Exact MW</span><span><i style="background:var(--approx)"></i>Approximate MW</span></div>
+    <div id="qchart"></div>
+    <p class="note">This tracks what Nordex <b>announces</b>, so it is an early indicator, not the official order intake (that comes with the quarterly report and includes unannounced orders). Excluded from totals: intake summaries, framework / "up to" agreements, the same release posted twice, orders flagged as previously announced, and likely repeats (same customer or wind farm, same country, MW within 2%, within 12 months). Approximate figures ("approx.", "more than") are counted and marked *. Download: <a href="#" id="dlCsv">CSV</a> · <a href="#" id="dlJson">JSON</a> · <a href="#" id="logout">Lock this device</a></p>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+<div class="lock" id="lock">
+  <form class="card" id="lockForm" autocomplete="on">
+    <h2>Order pulse</h2>
+    <p class="sub">Enter the password to open the dashboard.</p>
+    <input type="text" name="username" value="dashboard" autocomplete="username" hidden>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Password" required>
+    <label class="rem"><input type="checkbox" id="remember" checked> Remember on this device</label>
+    <button id="lockBtn" type="submit">Open</button>
+    <p class="msg" id="lockMsg" aria-live="polite"></p>
+  </form>
+</div>
+
+<script>
+const fmt = (v, d = 0) => v == null ? "–" : v.toLocaleString("en-GB", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const fmtMW = v => v == null ? "–" : (Math.abs(v) >= 10000 ? (v / 1000).toLocaleString("en-GB", { maximumFractionDigits: 1 }) + " GW" : fmt(v, 1) + " MW");
+const $ = id => document.getElementById(id);
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const DAY = 864e5;
+let DATA, state = { q: "", country: "", search: "", showExcl: false, sort: "announced", dir: -1 };
+
+// ---------- quarter helpers (dates are local calendar days, compared as UTC midnights)
+const qOf = d => `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
+const qStart = q => { const [y, n] = q.split("-Q").map(Number); return Date.UTC(y, (n - 1) * 3, 1); };
+const qEnd = q => { const [y, n] = q.split("-Q").map(Number); return Date.UTC(y, n * 3, 1); };
+const qLen = q => Math.round((qEnd(q) - qStart(q)) / DAY);
+const qShift = (q, k) => { let [y, n] = q.split("-Q").map(Number); n += k; while (n < 1) { n += 4; y--; } while (n > 4) { n -= 4; y++; } return `${y}-Q${n}`; };
+const qName = q => q.replace("-", " ");
+const dayIdx = (iso, q) => Math.round((Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - qStart(q)) / DAY);
+const now = new Date(), TODAY = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+const CURRENT_Q = qOf(new Date(TODAY));
+// how far into a quarter we compare: today for the running quarter, the whole quarter otherwise
+const asOf = q => q === CURRENT_Q ? Math.round((TODAY - qStart(q)) / DAY) : qLen(q) - 1;
+
+const tip = $("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - w - 8) + "px"; tip.style.top = Math.max(8, e.clientY - h - 12) + "px"; }
+function hideTip() { tip.style.display = "none"; }
+
+// ---------- password lock: data/deals.enc.json is AES-GCM encrypted, key = PBKDF2-SHA256(password)
+const PW_KEY = "nordex-pulse-pw";
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function decryptBlob(blob, pw) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: b64(blob.salt), iterations: blob.iter },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(blob.iv) }, key, b64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+const store = { get() { try { return localStorage.getItem(PW_KEY); } catch { return null; } },
+  set(v) { try { localStorage.setItem(PW_KEY, v); } catch {} }, clear() { try { localStorage.removeItem(PW_KEY); } catch {} } };
+
+async function load() {
+  const enc = await fetch("data/deals.enc.json", { cache: "no-store" }).catch(() => null);
+  if (!enc || !enc.ok) { // local / unencrypted mode
+    start(await (await fetch("data/deals.json", { cache: "no-store" })).json()); return;
+  }
+  const blob = await enc.json();
+  const saved = store.get();
+  if (saved) { try { start(await decryptBlob(blob, saved)); return; } catch { store.clear(); } }
+  $("lock").style.display = "flex"; $("pw").focus();
+  $("lockForm").onsubmit = async e => {
+    e.preventDefault();
+    $("lockBtn").disabled = true; $("lockMsg").textContent = "Unlocking…";
+    try {
+      const d = await decryptBlob(blob, $("pw").value);
+      if ($("remember").checked) store.set($("pw").value);
+      $("lock").style.display = "none"; start(d);
+    } catch { $("lockMsg").textContent = "Wrong password."; $("pw").select(); }
+    $("lockBtn").disabled = false;
+  };
+}
+$("logout").onclick = e => { e.preventDefault(); store.clear(); location.reload(); };
+load();
+
+function download(name, text, type) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function toCSV(rows) {
+  const cols = ["announced", "quarter", "mw", "mw_approx", "country", "customer", "turbine_model", "platform_family",
+    "turbine_count", "wind_farm", "firmed_period", "counted", "excluded_reason", "title", "link"];
+  const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  return [cols.join(","), ...rows.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
+}
+
+function start(d) {
+  DATA = d;
+  $("app").style.display = "";
+  $("dlCsv").onclick = e => { e.preventDefault(); download("nordex-orders.csv", toCSV(d.deals), "text/csv"); };
+  $("dlJson").onclick = e => { e.preventDefault(); download("nordex-orders.json", JSON.stringify(d, null, 1), "application/json"); };
+  $("updated").textContent = "Updated " + new Date(d.generated_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) + ".";
+  if (d.pending_extraction > 0) { $("pending").style.display = "block";
+    $("pending").textContent = `${d.pending_extraction} releases are still waiting for LLM parsing (free-tier cap per run). They will be added on the next runs.`; }
+  const qs = new Set(d.quarters.map(q => q.quarter)); qs.add(CURRENT_Q);
+  const quarters = [...qs].sort();
+  state.q = CURRENT_Q;
+  $("q").innerHTML = quarters.slice().reverse().map(q => `<option value="${q}">${qName(q)}${q === CURRENT_Q ? " (current)" : ""}</option>`).join("");
+  $("q").value = state.q;
+  const countries = [...new Set(d.deals.flatMap(x => (x.country || "").split(",").map(s => s.trim())).filter(Boolean))].sort();
+  $("country").innerHTML += countries.map(c => `<option>${esc(c)}</option>`).join("");
+  $("q").onchange = e => { state.q = e.target.value; render(); };
+  $("country").onchange = e => { state.country = e.target.value; render(); };
+  $("search").oninput = e => { state.search = e.target.value.toLowerCase(); renderTable(); };
+  $("showExcl").onchange = e => { state.showExcl = e.target.checked; renderTable(); };
+  document.querySelectorAll("th[data-k]").forEach(th => th.onclick = () => {
+    const k = th.dataset.k; state.dir = state.sort === k ? -state.dir : (k === "mw" || k === "announced" ? -1 : 1); state.sort = k; renderTable(); });
+  render();
+  addEventListener("resize", () => { drawCumChart(); drawQuarterChart(); });
+}
+
+const countryOk = x => !state.country || (x.country || "").split(",").map(s => s.trim()).includes(state.country);
+// counted deals of quarter q announced up to day index `upto`
+const dealsIn = (q, upto = 1e9) => DATA.deals.filter(x => x.counted && x.quarter === q && countryOk(x) && dayIdx(x.announced, q) <= upto);
+const sumMW = rows => rows.reduce((s, x) => s + (x.mw || 0), 0);
+
+function render() {
+  document.querySelectorAll(".qlabel").forEach(e => e.textContent = `MW, ${qName(state.q)}${state.q === CURRENT_Q ? " so far" : ""}`);
+  drawTiles(); drawCumChart(); drawBreakdowns(); renderTable(); drawQuarterChart();
+}
+
+function cmp(cur, prev) {
+  if (!prev) return cur ? { v: "new", cls: "up" } : { v: "–", cls: "" };
+  const p = (cur - prev) / prev * 100;
+  return { v: `${p >= 0 ? "+" : "−"}${Math.abs(Math.round(p))}%`, cls: p >= 0 ? "up" : "down" };
+}
+
+function drawTiles() {
+  const q = state.q, day = asOf(q), running = q === CURRENT_Q;
+  const cur = dealsIn(q, day), mw = sumMW(cur);
+  const approx = sumMW(cur.filter(x => x.mw_approx)), noMW = cur.filter(x => x.mw == null).length;
+  $("t-mw-l").textContent = running ? "Announced so far this quarter" : `Announced in ${qName(q)}`;
+  $("t-mw").textContent = fmtMW(mw);
+  $("t-mw-d").innerHTML = running
+    ? `Day ${day + 1} of ${qLen(q)} · ${qLen(q) - day - 1} days left<div class="progress"><div style="width:${(day + 1) / qLen(q) * 100}%"></div></div>`
+    : (approx ? `${Math.round(approx / mw * 100)}% from approximate figures` : "All figures exact");
+  $("t-n").textContent = fmt(cur.length);
+  $("t-n-d").textContent = noMW ? `${noMW} without a published MW figure` : (approx && running ? `${Math.round(approx / mw * 100)}% of MW from approximate figures` : `${qName(q)}${running ? " to date" : ""}`);
+
+  for (const [id, other, label] of [["pq", qShift(q, -1), "last quarter"], ["py", qShift(q, -4), "same quarter last year"]]) {
+    const oMW = sumMW(dealsIn(other, day)), c = cmp(mw, oMW);
+    $(`t-${id}-l`).textContent = running ? `vs ${label}, same point` : `vs ${label}`;
+    $(`t-${id}`).innerHTML = `<span class="${c.cls ? "" : ""}">${c.v}</span>`;
+    $(`t-${id}-d`).innerHTML = `${qName(other)}${running ? ` by day ${day + 1}` : ""}: <b>${fmtMW(oMW)}</b>` +
+      (c.cls ? ` · <span class="${c.cls}">${c.cls === "up" ? "▲ ahead" : "▼ behind"}</span>` : "");
+  }
+}
+
+// ---------- cumulative chart: selected quarter vs previous quarter vs same quarter last year
+function cumSeries(q, upto) {
+  const rows = dealsIn(q, upto).filter(x => x.mw).sort((a, b) => a.announced.localeCompare(b.announced));
+  const pts = [[0, 0]]; let s = 0;
+  rows.forEach(x => { const d = dayIdx(x.announced, q); pts.push([d, s]); s += x.mw; pts.push([d, s]); });
+  pts.push([upto, s]);
+  return { pts, total: s, rows };
+}
+function drawCumChart() {
+  const el = $("cumchart"), W = el.clientWidth || 800, H = 280, m = { t: 16, r: 120, b: 26, l: 48 };
+  if (W < 520) m.r = 16;
+  const q = state.q, running = q === CURRENT_Q, len = 92;
+  const series = [
+    { q, upto: asOf(q), color: "var(--s1)", name: qName(q) + (running ? " (now)" : ""), w: 2.5 },
+    { q: qShift(q, -1), upto: qLen(qShift(q, -1)) - 1, color: "var(--s2)", name: qName(qShift(q, -1)), w: 2 },
+    { q: qShift(q, -4), upto: qLen(qShift(q, -4)) - 1, color: "var(--s3)", name: qName(qShift(q, -4)), w: 2 },
+  ].map(s => ({ ...s, ...cumSeries(s.q, s.upto) }));
+  $("cumTitle").textContent = running ? "How this quarter is tracking" : `How ${qName(q)} tracked`;
+  $("cumSub").textContent = `Cumulative announced MW by day of quarter${state.country ? " · " + state.country : ""}. Each step is a press release. Hover for details.`;
+  $("cumLegend").innerHTML = series.map(s => `<span><i class="ln" style="background:${s.color}"></i>${s.name}</span>`).join("");
+  const max = Math.max(1, ...series.map(s => s.total)), step = niceStep(max / 4), top = Math.ceil(max / step) * step;
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const x = d => m.l + d / (len - 1) * iw, y = v => m.t + ih - v / top * ih;
+  let s = `<svg width="${W}" height="${H}" role="img" aria-label="Cumulative announced MW by day of quarter">`;
+  for (let v = 0; v <= top + 1e-9; v += step)
+    s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v >= 10000 ? fmt(v / 1000) + "K" : fmt(v)}</text>`;
+  ["Month 1", "Month 2", "Month 3"].forEach((t, i) => {
+    const d = i * 30.5; s += `<line x1="${x(d)}" x2="${x(d)}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--line)"/><text x="${x(d) + 4}" y="${H - 8}">${t}</text>`; });
+  if (running) { const d = asOf(q); s += `<text x="${x(d)}" y="${m.t + 10}" text-anchor="middle" class="lbl">today</text>`; }
+  // draw comparison lines first, selected quarter on top
+  [...series].reverse().forEach(se => {
+    s += `<path d="${se.pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("")}" fill="none" stroke="${se.color}" stroke-width="${se.w}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last = se.pts[se.pts.length - 1];
+    s += `<circle cx="${x(last[0])}" cy="${y(last[1])}" r="4" fill="${se.color}" stroke="var(--surface-1)" stroke-width="2"/>`;
+  });
+  // the running quarter is labelled at its own end point (mid-chart); finished quarters in the right gutter
+  const sel = series[0], selEnd = sel.pts[sel.pts.length - 1];
+  if (running) s += `<text class="lbl" x="${x(selEnd[0]) + 8}" y="${y(selEnd[1]) - 8}" style="font-weight:600;fill:var(--text-primary);stroke:var(--surface-1);stroke-width:4px;paint-order:stroke">${fmt(sel.total)} MW</text>`;
+  if (m.r > 40) { // direct end labels with simple collision nudging
+    const labs = (running ? series.slice(1) : series).map(se => ({ y: y(se.total), t: `${se.name.replace(" (now)", "")} · ${fmt(se.total)} MW`, c: se.color })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+    labs.forEach(l => s += `<text class="lbl" x="${m.l + iw + 10}" y="${l.y + 4}">${l.t}</text>`);
+  }
+  s += `<line id="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--text-muted)" stroke-width="1" style="display:none"/>`;
+  s += `<rect id="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+  el.innerHTML = s;
+  const hit = el.querySelector("#hit"), xh = el.querySelector("#xh");
+  hit.onmousemove = e => {
+    const r = hit.getBoundingClientRect(), d = Math.max(0, Math.min(len - 1, Math.round((e.clientX - r.left) / r.width * (len - 1))));
+    xh.setAttribute("x1", x(d)); xh.setAttribute("x2", x(d)); xh.style.display = "";
+    const rows = series.map(se => {
+      if (d > se.upto) return `<div class="row"><span><i style="background:${se.color}"></i>${se.name}</span><span>–</span></div>`;
+      const v = sumMW(se.rows.filter(r => dayIdx(r.announced, se.q) <= d));
+      const date = new Date(qStart(se.q) + d * DAY).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      return `<div class="row"><span><i style="background:${se.color}"></i>${se.name} (${date})</span><span>${fmt(v, 1)} MW</span></div>`;
+    }).join("");
+    showTip(e, `<b>Day ${d + 1} of the quarter</b>${rows}`);
+  };
+  hit.onmouseleave = () => { hideTip(); xh.style.display = "none"; };
+}
+
+function drawQuarterChart() {
+  const el = $("qchart"), W = el.clientWidth || 800, H = 220, m = { t: 16, r: 8, b: 26, l: 48 };
+  const set = new Set(DATA.quarters.map(q => q.quarter)); set.add(CURRENT_Q);
+  const qs = [...set].sort().map(q => { const ds = dealsIn(q);
+    return { quarter: q, exact: sumMW(ds.filter(x => !x.mw_approx)), approx: sumMW(ds.filter(x => x.mw_approx)), n: ds.length }; });
+  const max = Math.max(1, ...qs.map(q => q.exact + q.approx)), step = niceStep(max / 4), top = Math.ceil(max / step) * step;
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, band = iw / qs.length, bw = Math.min(24, band * 0.6);
+  const y = v => m.t + ih - v / top * ih;
+  let s = `<svg width="${W}" height="${H}" role="img" aria-label="Announced MW per quarter">`;
+  for (let v = 0; v <= top + 1e-9; v += step)
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v >= 10000 ? fmt(v / 1000) + "K" : fmt(v)}</text>`;
+  const every = Math.ceil(qs.length / Math.max(1, Math.floor(iw / 64)));
+  qs.forEach((q, i) => {
+    const cx = m.l + band * i + band / 2, bx = cx - bw / 2, sel = q.quarter === state.q;
+    const eTop = y(q.exact), aTop = y(q.exact + q.approx);
+    s += `<g data-i="${i}" style="cursor:pointer" opacity="${sel ? 1 : 0.5}"><rect x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}" fill="transparent"/>`;
+    if (q.exact > 0) s += bar(bx, eTop, bw, y(0) - eTop, "var(--exact)", q.approx <= 0);
+    if (q.approx > 0) s += bar(bx, aTop, bw, Math.max(0, eTop - aTop - (q.exact > 0 ? 2 : 0)), "var(--approx)", true);
+    if (sel) s += `<text class="val" x="${cx}" y="${aTop - 6}" text-anchor="middle">${fmt(q.exact + q.approx)}${q.quarter === CURRENT_Q ? " so far" : ""}</text>`;
+    if (i % every === 0 || sel) s += `<text x="${cx}" y="${H - 8}" text-anchor="middle" ${sel ? 'style="fill:var(--text-primary);font-weight:600"' : ""}>${qName(q.quarter)}</text>`;
+    s += `</g>`;
+  });
+  el.innerHTML = s + "</svg>";
+  el.querySelectorAll("g[data-i]").forEach(g => { const q = qs[+g.dataset.i];
+    g.onmousemove = e => showTip(e, `<b>${qName(q.quarter)}${q.quarter === CURRENT_Q ? " (to date)" : ""}</b>
+      <div class="row"><span>Announced</span><span>${fmtMW(q.exact + q.approx)}</span></div>
+      <div class="row"><span>of which approx.</span><span>${fmtMW(q.approx)}</span></div>
+      <div class="row"><span>Firm orders</span><span>${q.n}</span></div>`);
+    g.onmouseleave = hideTip;
+    g.onclick = () => { state.q = q.quarter; $("q").value = state.q; render(); scrollTo({ top: 0, behavior: "smooth" }); };
+  });
+}
+function bar(x, yTop, w, h, fill, roundTop) {
+  if (h <= 0) return "";
+  const r = roundTop ? Math.min(4, h, w / 2) : 0;
+  return `<path d="M${x},${yTop + h}V${yTop + r}${r ? `Q${x},${yTop} ${x + r},${yTop}` : ""}H${x + w - r}${r ? `Q${x + w},${yTop} ${x + w},${yTop + r}` : ""}V${yTop + h}Z" fill="${fill}"/>`;
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+
+function drawBreakdowns() {
+  const deals = dealsIn(state.q).filter(x => x.mw);
+  hbars("byCountry", group(deals, x => x.country || "Not disclosed"));
+  hbars("byModel", group(deals, x => x.turbine_model || "Not disclosed"));
+  hbars("byCustomer", group(deals, x => x.customer || "Not disclosed"), 8);
+}
+function group(rows, keyFn) {
+  const m = new Map();
+  rows.forEach(r => { const k = keyFn(r), o = m.get(k) || { k, mw: 0, n: 0, approx: false }; o.mw += r.mw; o.n++; o.approx ||= r.mw_approx; m.set(k, o); });
+  const arr = [...m.values()].sort((a, b) => b.mw - a.mw);
+  return arr.filter(o => o.k !== "Not disclosed").concat(arr.filter(o => o.k === "Not disclosed"));
+}
+function hbars(id, rows, limit = 10) {
+  const el = $(id);
+  if (!rows.length) { el.innerHTML = `<p class="empty">No orders announced yet.</p>`; return; }
+  let shown = rows.slice(0, limit);
+  if (rows.length > limit) { const rest = rows.slice(limit); shown.push({ k: `Other (${rest.length})`, mw: sumMW(rest), n: rest.reduce((s, o) => s + o.n, 0) }); }
+  const max = Math.max(...shown.map(o => o.mw));
+  el.innerHTML = `<div class="hbar">` + shown.map((o, i) =>
+    `<div class="name" title="${esc(o.k)}">${esc(o.k)}</div><div class="track" data-i="${i}"><div class="bar" style="width:${Math.max(1, o.mw / max * 78)}%"></div><span class="num">${fmt(o.mw, 1)}${o.approx ? "*" : ""}</span></div>`).join("") + `</div>`;
+  el.querySelectorAll(".track").forEach(t => { const o = shown[+t.dataset.i];
+    t.onmousemove = e => showTip(e, `<b>${esc(o.k)}</b><div class="row"><span>MW</span><span>${fmt(o.mw, 1)}${o.approx ? " (incl. approx.)" : ""}</span></div><div class="row"><span>Orders</span><span>${o.n}</span></div>`);
+    t.onmouseleave = hideTip; });
+}
+
+function renderTable() {
+  let rows = DATA.deals.filter(x => x.quarter === state.q && countryOk(x) && (state.showExcl || x.counted));
+  if (state.search) rows = rows.filter(x => [x.customer, x.wind_farm, x.title, x.country, x.turbine_model].join(" ").toLowerCase().includes(state.search));
+  const k = state.sort, dir = state.dir;
+  rows.sort((a, b) => { const va = a[k] ?? (typeof b[k] === "number" ? -1 : ""), vb = b[k] ?? (typeof a[k] === "number" ? -1 : "");
+    return (va > vb ? 1 : va < vb ? -1 : 0) * dir; });
+  const counted = rows.filter(x => x.counted).length;
+  $("tableSub").textContent = `${counted} counted${state.showExcl ? `, ${rows.length - counted} excluded` : ""} · ${qName(state.q)}${state.country ? " · " + state.country : ""}. * = approximate figure.`;
+  $("tbl").querySelector("tbody").innerHTML = rows.map(x => `<tr class="${x.counted ? "" : "excl"}">
+    <td>${x.announced}</td>
+    <td class="num mw">${x.mw == null ? "–" : fmt(x.mw, 1) + (x.mw_approx ? "*" : "")}</td>
+    <td>${esc(x.country) || "–"}</td><td>${esc(x.customer) || '<span class="pill">Not disclosed</span>'}</td>
+    <td>${esc(x.turbine_model) || "–"}</td><td class="num">${x.turbine_count ?? "–"}</td><td>${esc(x.wind_farm) || "–"}</td>
+    <td>${esc(x.firmed_period) || "–"}</td>
+    <td><a href="${x.link}" target="_blank" rel="noopener" title="${esc(x.title)}">Release</a>${x.counted ? "" : `<span class="reason">Excluded: ${esc(x.excluded_reason)}</span>`}</td></tr>`).join("")
+    || `<tr><td colspan="9" class="empty">No orders announced in this quarter yet.</td></tr>`;
+}
+</script>
+</body>
+</html>

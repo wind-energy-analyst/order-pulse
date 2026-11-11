@@ -1,0 +1,132 @@
+{
+ "Nordex Group to enter Albania": {
+  "release_type": "single_order",
+  "orders": [
+   {
+    "mw": 84,
+    "mw_is_approximate": false,
+    "mw_text": "84 MW",
+    "turbine_count": 12,
+    "turbine_model": "N163/6.X",
+    "country": "Albania",
+    "customer": "VERBUND",
+    "wind_farm": "Spille",
+    "previously_announced": false,
+    "firmed_period_text": null
+   }
+  ],
+  "headline_total_mw": 84
+ },
+ "Nordex Group to supply DenkerWulf": {
+  "release_type": "single_order",
+  "orders": [
+   {
+    "mw": 51.3,
+    "mw_is_approximate": false,
+    "mw_text": "51.3 MW",
+    "turbine_count": 9,
+    "turbine_model": "N149/5.X",
+    "country": "Germany",
+    "customer": "DenkerWulf",
+    "wind_farm": "Bredenbek",
+    "previously_announced": false,
+    "firmed_period_text": null
+   }
+  ],
+  "headline_total_mw": 51.3
+ },
+ "Nordex Group enters New Zealand": {
+  "release_type": "single_order",
+  "orders": [
+   {
+    "mw": 192,
+    "mw_is_approximate": false,
+    "mw_text": "192 MW",
+    "turbine_count": 40,
+    "turbine_model": "N133/4.8",
+    "country": "New Zealand",
+    "customer": "Mercury",
+    "wind_farm": null,
+    "previously_announced": false,
+    "firmed_period_text": null
+   }
+  ],
+  "headline_total_mw": 192
+ },
+ "Nordex Group order intake rises": {
+  "release_type": "intake_summary",
+  "orders": [],
+  "intake_figures": [
+   {
+    "period": "Q3 2026",
+    "gw": 2.8
+   },
+   {
+    "period": "9M 2026",
+    "gw": 7.7
+   }
+  ]
+ },
+ "Nordex SE: Nordex Group order intake rises": {
+  "release_type": "intake_summary",
+  "orders": [],
+  "intake_figures": [
+   {
+    "period": "Q3 2026",
+    "gw": 2.8
+   }
+  ]
+ },
+ "Nordex obtains orders for 414 MW": {
+  "release_type": "multi_order",
+  "orders": [
+   {
+    "mw": 414,
+    "mw_is_approximate": true,
+    "mw_text": "more than 414 MW",
+    "turbine_count": 78,
+    "turbine_model": null,
+    "country": "France, Belgium, Portugal",
+    "customer": null,
+    "wind_farm": null,
+    "previously_announced": false,
+    "firmed_period_text": "end of the year 2025"
+   }
+  ],
+  "headline_total_mw": 414
+ },
+ "Nordex Group receives orders from UKA": {
+  "release_type": "single_order",
+  "orders": [
+   {
+    "mw": 224.4,
+    "mw_is_approximate": false,
+    "mw_text": "224.4 MW",
+    "turbine_count": 33,
+    "turbine_model": "N175/6.X",
+    "country": "Germany",
+    "customer": "UKA",
+    "wind_farm": null,
+    "previously_announced": false,
+    "firmed_period_text": "December 2025"
+   }
+  ]
+ },
+ "Nordex Group recaps UKA": {
+  "release_type": "single_order",
+  "orders": [
+   {
+    "mw": 224.4,
+    "mw_is_approximate": false,
+    "mw_text": "224.4 MW",
+    "turbine_count": 33,
+    "turbine_model": "N175/6.X",
+    "country": "Germany",
+    "customer": "UKA",
+    "wind_farm": null,
+    "previously_announced": false,
+    "firmed_period_text": "December 2025"
+   }
+  ]
+ }
+}

@@ -1,0 +1,4 @@
+{
+  "_help": "Manual corrections keyed by deal id (<release id>-<order index>, see the JSON). Any field you set here wins over the LLM. Set \"exclude\": true plus \"exclude_reason\" to drop a row from totals.",
+  "_example_204801-0": {"customer": "VERBUND Green Power", "exclude": false}
+}
