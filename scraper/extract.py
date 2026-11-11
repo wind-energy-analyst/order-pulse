@@ -1,6 +1,7 @@
 """LLM extraction of firm orders from one press release.
 
-Default provider: GitHub Models (free, uses the workflow's GITHUB_TOKEN).
+Default provider: Groq free tier (console.groq.com, no credit card), model openai/gpt-oss-120b.
+(GitHub Models, the original choice, was retired by GitHub on 30 July 2026.)
 Any OpenAI-compatible endpoint works by setting LLM_BASE_URL / LLM_API_KEY / LLM_MODEL,
 e.g. Google Gemini: LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 """
@@ -9,15 +10,17 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 
 import requests
 from pydantic import ValidationError
 
 from schema import Extraction
 
-BASE_URL = os.getenv("LLM_BASE_URL", "https://models.github.ai/inference")
-API_KEY = os.getenv("LLM_API_KEY") or os.getenv("GITHUB_TOKEN")
-MODEL = os.getenv("LLM_MODEL", "openai/gpt-4.1-mini")
+BASE_URL = os.getenv("LLM_BASE_URL") or "https://api.groq.com/openai/v1"
+API_KEY = os.getenv("LLM_API_KEY")  # never fall back to GITHUB_TOKEN: it must not be sent to a third party
+MODEL = os.getenv("LLM_MODEL") or "openai/gpt-oss-120b"
+MAX_TEXT_CHARS = 6000  # keeps each call well under the free tier's tokens-per-minute limit
 
 SYSTEM = """You extract FIRM wind turbine orders from Nordex Group press releases.
 Return ONLY a JSON object with this shape:
@@ -69,10 +72,18 @@ class LLMError(Exception):
     pass
 
 
-def _chat(messages: list[dict], json_mode: bool = True) -> str:
+def _retry_after(r) -> float | None:
+    v = r.headers.get("retry-after") if hasattr(r, "headers") and r.headers else None
+    try:
+        return float(v) if v is not None else None
+    except ValueError:
+        return None
+
+
+def _chat(messages: list[dict], json_mode: bool = True, _attempt: int = 0) -> str:
     """One OpenAI-compatible chat/completions call with plain HTTP (no SDK, so no version surprises)."""
     if not API_KEY:
-        raise LLMError("No LLM_API_KEY / GITHUB_TOKEN set")
+        raise LLMError("No LLM_API_KEY set. Add your Groq API key as the repo secret LLM_API_KEY.")
     body = {"model": MODEL, "messages": messages, "temperature": 0}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
@@ -83,6 +94,11 @@ def _chat(messages: list[dict], json_mode: bool = True) -> str:
         timeout=120,
     )
     if r.status_code == 429:
+        wait = _retry_after(r)
+        # per-minute limit: wait it out and retry; daily limit (long or unknown wait): stop, resume next run
+        if wait is not None and wait <= 90 and _attempt < 3:
+            time.sleep(wait + 1)
+            return _chat(messages, json_mode, _attempt + 1)
         raise RateLimited(r.text[:300])
     if r.status_code == 400 and json_mode and "response_format" in r.text:
         return _chat(messages, json_mode=False)  # model without JSON mode; the prompt already asks for JSON only
@@ -100,7 +116,7 @@ def _parse(raw: str) -> Extraction:
 
 
 def extract(title: str, date: str, text: str) -> Extraction:
-    user = f"TITLE: {title}\nPUBLISHED: {date}\n\nTEXT:\n{text}"
+    user = f"TITLE: {title}\nPUBLISHED: {date}\n\nTEXT:\n{text[:MAX_TEXT_CHARS]}"
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
     last_err = None
     for _ in range(2):

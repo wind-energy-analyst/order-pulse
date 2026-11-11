@@ -6,7 +6,7 @@ Usage:
   python scraper/run.py --reextract     # clear cached extractions (after prompt change), then extract again
 Env:
   BACKFILL_FROM   first date to fetch when the cache is empty (default 2024-01-01)
-  MAX_LLM_CALLS   cap per run so the free tier is never exceeded (default 40); the rest resumes next run
+  MAX_LLM_CALLS   cap per run so the free tier is never exceeded (default 60); the rest resumes next run
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ import build  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 RELEASES = ROOT / "data" / "releases"
 BACKFILL_FROM = os.getenv("BACKFILL_FROM", "2024-01-01")
-MAX_LLM_CALLS = int(os.getenv("MAX_LLM_CALLS", "40"))
-LLM_PAUSE_S = float(os.getenv("LLM_PAUSE_S", "6"))  # stay under free-tier requests/minute
+MAX_LLM_CALLS = int(os.getenv("MAX_LLM_CALLS") or "60")
+LLM_PAUSE_S = float(os.getenv("LLM_PAUSE_S") or "20")  # ~3 calls/min keeps us under the free tokens-per-minute limit
 
 
 def _path(rid: str) -> Path:
