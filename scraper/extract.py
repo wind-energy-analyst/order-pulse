@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
-from openai import OpenAI
+import requests
 from pydantic import ValidationError
 
 from schema import Extraction
@@ -60,31 +61,56 @@ Rules:
 9. Use null for anything not stated. Never invent values."""
 
 
-def _client() -> OpenAI:
+class RateLimited(Exception):
+    """Free-tier quota or requests-per-minute limit reached; resume on the next run."""
+
+
+class LLMError(Exception):
+    pass
+
+
+def _chat(messages: list[dict], json_mode: bool = True) -> str:
+    """One OpenAI-compatible chat/completions call with plain HTTP (no SDK, so no version surprises)."""
     if not API_KEY:
-        raise RuntimeError("No LLM_API_KEY / GITHUB_TOKEN set")
-    return OpenAI(base_url=BASE_URL, api_key=API_KEY)
+        raise LLMError("No LLM_API_KEY / GITHUB_TOKEN set")
+    body = {"model": MODEL, "messages": messages, "temperature": 0}
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    r = requests.post(
+        BASE_URL.rstrip("/") + "/chat/completions",
+        headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json", "Accept": "application/json"},
+        json=body,
+        timeout=120,
+    )
+    if r.status_code == 429:
+        raise RateLimited(r.text[:300])
+    if r.status_code == 400 and json_mode and "response_format" in r.text:
+        return _chat(messages, json_mode=False)  # model without JSON mode; the prompt already asks for JSON only
+    if r.status_code >= 400:
+        raise LLMError(f"HTTP {r.status_code} from {BASE_URL}: {r.text[:300]}")
+    try:
+        return r.json()["choices"][0]["message"]["content"] or ""
+    except Exception:
+        raise LLMError(f"Unexpected response from {BASE_URL}: {r.text[:300]}")
 
 
-def extract(title: str, date: str, text: str, client: OpenAI | None = None) -> Extraction:
-    client = client or _client()
+def _parse(raw: str) -> Extraction:
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())  # tolerate fenced JSON
+    return Extraction.model_validate(json.loads(raw))
+
+
+def extract(title: str, date: str, text: str) -> Extraction:
     user = f"TITLE: {title}\nPUBLISHED: {date}\n\nTEXT:\n{text}"
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
     last_err = None
     for _ in range(2):
-        resp = client.chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-        raw = resp.choices[0].message.content or "{}"
+        raw = _chat(messages)
         try:
-            return Extraction.model_validate(json.loads(raw))
+            return _parse(raw)
         except (json.JSONDecodeError, ValidationError) as e:
             last_err = e
             messages += [
                 {"role": "assistant", "content": raw},
                 {"role": "user", "content": f"That JSON was invalid: {e}. Return corrected JSON only."},
             ]
-    raise RuntimeError(f"Extraction failed after retry: {last_err}")
+    raise LLMError(f"Invalid JSON after retry: {last_err}")

@@ -66,8 +66,7 @@ def fetch_new() -> int:
 
 
 def extract_pending() -> int:
-    from extract import MODEL, extract
-    from openai import RateLimitError
+    from extract import MODEL, RateLimited, extract
 
     pending = []
     for p in sorted(RELEASES.glob("*.json")):
@@ -76,16 +75,23 @@ def extract_pending() -> int:
             pending.append((p, r))
     pending.sort(key=lambda x: x[1]["date"], reverse=True)  # newest first
     print(f"[extract] {len(pending)} pending, cap {MAX_LLM_CALLS}")
-    done = 0
+    done, fails_in_a_row = 0, 0
     for p, r in pending[:MAX_LLM_CALLS]:
         try:
             ex = extract(r["title"], r["date"], r["text"])
-        except RateLimitError:
-            print("[extract] rate limited; stopping, will resume next run")
+        except RateLimited as e:
+            print(f"[extract] rate limited; stopping, will resume next run. {e}")
             break
         except Exception as e:  # keep going on single failures
             print(f"[extract] FAILED {r['title'][:60]}: {e}")
+            fails_in_a_row += 1
+            if fails_in_a_row >= 3 and done == 0:
+                print("[extract] 3 failures in a row before any success: the error looks systematic, stopping "
+                      "to save the free quota. Fix the error above and run again.")
+                break
+            time.sleep(LLM_PAUSE_S)
             continue
+        fails_in_a_row = 0
         r["extraction"] = ex.model_dump()
         r["extraction_model"] = MODEL
         r["extracted_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

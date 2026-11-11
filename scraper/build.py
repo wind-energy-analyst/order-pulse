@@ -36,7 +36,8 @@ def norm(s: str | None) -> str:
 
 
 def norm_title(t: str) -> str:
-    return norm(re.sub(r"^\s*Nordex SE:\s*", "", t))
+    # the site posts some releases twice: "Nordex SE: X" (ad hoc) and "Press release: X" next to plain "X"
+    return norm(re.sub(r"^\s*(Nordex SE|Press release)\s*:\s*", "", t, flags=re.I))
 
 
 def platform_of(model: str | None) -> tuple[str | None, str | None]:
