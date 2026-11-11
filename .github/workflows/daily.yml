@@ -1,0 +1,72 @@
+name: Daily Nordex orders
+
+on:
+  schedule:
+    - cron: "17 5 * * *"   # every day ~06:17 CET
+  workflow_dispatch:
+    inputs:
+      max_llm_calls:
+        description: "Max LLM calls this run (raise for the first backfill)"
+        default: "40"
+      reextract:
+        description: "Re-parse ALL cached releases (only after changing the prompt)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # commit refreshed data
+  models: read      # free GitHub Models inference with GITHUB_TOKEN
+  pages: write
+  id-token: write
+
+concurrency:
+  group: nordex-orders
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Fetch, extract, build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional overrides (repo Settings > Secrets and variables > Actions)
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'openai/gpt-4.1-mini' }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://models.github.ai/inference' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          BACKFILL_FROM: ${{ vars.BACKFILL_FROM || '2024-01-01' }}
+          MAX_LLM_CALLS: ${{ inputs.max_llm_calls || '40' }}
+          # Public repo: all data is encrypted with this password; the run refuses to start without it
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+          REQUIRE_PASSWORD: "true"
+        run: |
+          python scraper/run.py ${{ inputs.reextract && '--reextract' || '' }}
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data docs/data   # .gitignore keeps the plaintext files out; only *.enc files are committed
+          if git diff --cached --name-only | grep -E '^(data/releases/.*\.json|docs/data/deals\.(json|csv))$'; then
+            echo "Plaintext data staged, aborting"; exit 1
+          fi
+          git diff --cached --quiet || git commit -m "data: refresh $(date -u +%F)"
+          git push
+
+      - name: Guard - only encrypted data goes to the website
+        run: test ! -e docs/data/deals.json && test ! -e docs/data/deals.csv && test -e docs/data/deals.enc.json
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - uses: actions/deploy-pages@v4
