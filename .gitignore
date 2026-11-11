@@ -1,0 +1,7 @@
+   __pycache__/
+   *.pyc
+   .venv/
+   .env
+   data/releases/*.json
+   docs/data/deals.json
+   docs/data/deals.csv
