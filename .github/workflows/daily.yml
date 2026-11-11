@@ -6,16 +6,15 @@ on:
   workflow_dispatch:
     inputs:
       max_llm_calls:
-        description: "Max LLM calls this run (raise for the first backfill)"
-        default: "40"
+        description: "Max LLM calls this run (60 fits the free daily token budget)"
+        default: "60"
       reextract:
         description: "Re-parse ALL cached releases (only after changing the prompt)"
         type: boolean
         default: false
 
 permissions:
-  contents: write   # commit refreshed data
-  models: read      # free GitHub Models inference with GITHUB_TOKEN
+  contents: write   # commit refreshed (encrypted) data
   pages: write
   id-token: write
 
@@ -26,6 +25,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -38,13 +38,14 @@ jobs:
 
       - name: Fetch, extract, build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional overrides (repo Settings > Secrets and variables > Actions)
-          LLM_MODEL: ${{ vars.LLM_MODEL || 'openai/gpt-4.1-mini' }}
-          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://models.github.ai/inference' }}
+          # LLM: Groq free tier by default. Secret LLM_API_KEY = your Groq API key (console.groq.com).
+          # Optional repo variables LLM_BASE_URL / LLM_MODEL switch to any OpenAI-compatible provider.
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_PAUSE_S: ${{ vars.LLM_PAUSE_S }}
           BACKFILL_FROM: ${{ vars.BACKFILL_FROM || '2024-01-01' }}
-          MAX_LLM_CALLS: ${{ inputs.max_llm_calls || '40' }}
+          MAX_LLM_CALLS: ${{ inputs.max_llm_calls || '60' }}
           # Public repo: all data is encrypted with this password; the run refuses to start without it
           DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
           REQUIRE_PASSWORD: "true"
